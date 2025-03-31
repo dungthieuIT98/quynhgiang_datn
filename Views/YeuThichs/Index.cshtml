@@ -1,0 +1,108 @@
+@model IEnumerable<DoAn.Models.YeuThich>
+@{
+    ViewBag.Title = "Sản Phẩm Yêu Thích";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<main class="main">
+    <nav aria-label="breadcrumb" class="breadcrumb-nav">
+        <div class="container">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="~/Home/Index">Trang Chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Sản Phẩm Yêu Thích</li>
+            </ol>
+        </div>
+    </nav>
+
+    <div class="page-content">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-9">
+                    <div class="products mb-3">
+                        <div class="row productlist">
+                            @foreach (var item in Model)
+                            {
+                                <div class="col-6 col-md-4 col-xl-3">
+                                    <div class="product">
+                                        <figure class="product-media">
+                                            <a href="~/SanPhams/Details/@item.masp">
+                                                <img src="@Url.Content("~/wwwroot/images/" + item.SanPham.hinhanh)" alt="Product image" class="product-image">
+                                            </a>
+
+                                            <div class="product-action-vertical">
+                                                <a href="#" class="btn-product-icon btn-wishlist btn-expandable favorite-btn" data-product-id="@item.masp"><span>Yêu thích</span></a>
+                                            </div>
+
+                                            <div class="product-action">
+                                                <button id="addcart" data-product-id="@item.masp" class="btn-product btn-cart" title="Thêm vào giỏ">
+                                                    <span>Thêm vào giỏ</span>
+                                                </button>
+                                            </div>
+                                        </figure>
+
+                                        <div class="product-body">
+                                            <h3 class="product-title"><a href="~/SanPhams/Details/@item.masp">@item.SanPham.tensp</a></h3>
+                                            <div class="product-price">
+                                                @{
+                                                    decimal giaban = (decimal)item.SanPham.giaban;
+                                                    string formattedPrice = giaban.ToString("#,##0");
+                                                }
+                                                @formattedPrice đ
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Xử lý click nút yêu thích
+            $('.favorite-btn').click(function(e) {
+                e.preventDefault();
+                var productId = $(this).data('product-id');
+                var btn = $(this);
+
+                $.ajax({
+                    url: '@Url.Action("AddToFavorites", "YeuThichs")',
+                    type: 'POST',
+                    data: { masp: productId },
+                    success: function(result) {
+                        if (result.success) {
+                            toastr.success(result.message);
+                            // Cập nhật số lượng yêu thích
+                            updateFavoriteCount();
+                            // Xóa sản phẩm khỏi danh sách nếu đã xóa yêu thích
+                            if (result.message.includes("xóa")) {
+                                btn.closest('.col-6').remove();
+                            }
+                        } else {
+                            toastr.error(result.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Có lỗi xảy ra!');
+                    }
+                });
+            });
+
+            // Cập nhật số lượng sản phẩm yêu thích
+            function updateFavoriteCount() {
+                $.ajax({
+                    url: '@Url.Action("Count", "YeuThichs")',
+                    type: 'GET',
+                    success: function(result) {
+                        $('.wishlist-count').text(result.count);
+                    }
+                });
+            }
+        });
+    </script>
+} 

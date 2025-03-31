@@ -106,13 +106,22 @@
 
                     <div class="header-right">
                         <div class="header-dropdown-link">
-
-                            <a href="wishlist.html" class="wishlist-link">
-                                <i class="icon-heart-o"></i>
-                                <span class="wishlist-count">0</span>
-                                <span class="wishlist-txt">Yêu thích</span>
-                            </a>
-
+                            @if (Session["ma"] == null)
+                            {
+                                <a href="~/Login/Index" class="wishlist-link">
+                                    <i class="icon-heart-o"></i>
+                                    <span class="wishlist-count">0</span>
+                                    <span class="wishlist-txt">Yêu thích</span>
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="~/YeuThichs/Index" class="wishlist-link">
+                                    <i class="icon-heart-o"></i>
+                                    <span class="wishlist-count">0</span>
+                                    <span class="wishlist-txt">Yêu thích</span>
+                                </a>
+                            }
 
                             <div class="dropdown cart-dropdown">
                                 @if (Session["ma"] == null)
@@ -449,6 +458,25 @@
     <script src="~/Content/assets/js/main.js"></script>
     <script src="~/Content/assets/js/demos/demo-13.js"></script>
     <script src="~/Scripts/toastr.js"></script>
+
+    @section Scripts {
+        <script>
+            $(document).ready(function() {
+                // Cập nhật số lượng sản phẩm yêu thích khi trang load
+                function updateFavoriteCount() {
+                    $.ajax({
+                        url: '@Url.Action("Count", "YeuThichs")',
+                        type: 'GET',
+                        success: function(result) {
+                            $('.wishlist-count').text(result.count);
+                        }
+                    });
+                }
+
+                updateFavoriteCount();
+            });
+        </script>
+    }
 
 </body>
 </html>

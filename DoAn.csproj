@@ -167,6 +167,7 @@
     <Compile Include="Models\Model1.cs" />
     <Compile Include="Models\SanPham.cs" />
     <Compile Include="Models\TinTuc.cs" />
+    <Compile Include="PayMethod\MônLibrary.cs" />
     <Compile Include="PayMethod\VnPayLibrary.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

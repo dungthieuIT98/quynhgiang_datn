@@ -36,7 +36,7 @@
                                             </a>
 
                                             <div class="product-action-vertical">
-                                                <a href="#" class="btn-product-icon btn-wishlist btn-expandable"><span>Yêu thích</span></a>
+                                                <a href="#" class="btn-product-icon btn-wishlist btn-expandable favorite-btn" data-product-id="@item.masp"><span>Yêu thích</span></a>
                                             </div>
 
                                             <div class="product-action">
@@ -481,3 +481,44 @@
     //    });
     //}
 </script>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Xử lý click nút yêu thích
+            $('.favorite-btn').click(function(e) {
+                e.preventDefault();
+                var productId = $(this).data('product-id');
+
+                $.ajax({
+                    url: '@Url.Action("AddToFavorites", "YeuThichs")',
+                    type: 'POST',
+                    data: { masp: productId },
+                    success: function(result) {
+                        if (result.success) {
+                            toastr.success(result.message);
+                            // Cập nhật số lượng yêu thích
+                            updateFavoriteCount();
+                        } else {
+                            toastr.error(result.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Có lỗi xảy ra!');
+                    }
+                });
+            });
+
+            // Cập nhật số lượng sản phẩm yêu thích
+            function updateFavoriteCount() {
+                $.ajax({
+                    url: '@Url.Action("Count", "YeuThichs")',
+                    type: 'GET',
+                    success: function(result) {
+                        $('.wishlist-count').text(result.count);
+                    }
+                });
+            }
+        });
+    </script>
+}

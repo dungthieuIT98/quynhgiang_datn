@@ -1,8 +1,39 @@
-﻿
-@{
-    ViewBag.Title = "VnpayReturn";
+﻿@{
+    ViewBag.Title = "Kết Quả Thanh Toán";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h2>VnpayReturn</h2>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-body text-center">
+                    <h2 class="card-title mb-4">Kết Quả Thanh Toán</h2>
+                    
+                    @if (ViewBag.ThanhToanThanhCong)
+                    {
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle fa-3x mb-3"></i>
+                            <h4>Thanh Toán Thành Công!</h4>
+                            <p>Đơn hàng của bạn đã được thanh toán thành công.</p>
+                            <p>Mã đơn hàng: @ViewBag.MaDonHang</p>
+                            <p>Số tiền: @ViewBag.SoTien.ToString("#,##0") VNĐ</p>
+                            <a href="~/DonHangs" class="btn btn-primary mt-3">Xem Đơn Hàng</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-times-circle fa-3x mb-3"></i>
+                            <h4>Thanh Toán Thất Bại!</h4>
+                            <p>Đã có lỗi xảy ra trong quá trình thanh toán.</p>
+                            <p>Vui lòng thử lại hoặc liên hệ với chúng tôi để được hỗ trợ.</p>
+                            <a href="~/GioHangs" class="btn btn-primary mt-3">Quay Lại Giỏ Hàng</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 

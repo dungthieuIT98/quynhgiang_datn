@@ -9,6 +9,8 @@ using System.Web;
 using System.Web.Mvc;
 using DoAn.Models;
 using DoAn.PayMethod;
+using System.IO;
+using Newtonsoft.Json.Linq;
 
 namespace DoAn.Controllers
 {
@@ -62,7 +64,6 @@ namespace DoAn.Controllers
 
         public ActionResult DatHang()
         {
-            
             KhachHang taikhoan = db.KhachHangs.Find((int)Session["ma"]);
             List<GioHang> dssp = db.GioHangs.Where(s => s.makhachhang == taikhoan.makhachhang).ToList();
             decimal tongtien = 0;
@@ -71,21 +72,13 @@ namespace DoAn.Controllers
                 tongtien = tongtien + (decimal)(item.SanPham.giaban * item.soluong);
             }
             DonHang donHang = new DonHang();
-            //string thanhtoan = Request.Form["thanhtoan"];
-            //if (thanhtoan == "cod")
-            //{
-            //    donHang.thanhtoan = "Thanh toán khi nhận hàng";
-            //}
-            //else if(thanhtoan == "banking")
-            //{
-            //    donHang.thanhtoan = "Chuyển Khoản";
-            //}
-            donHang.makhachhang = taikhoan.makhachhang;
+            string thanhtoan = Request.Form["thanhtoan"];
             
+            donHang.makhachhang = taikhoan.makhachhang;
             donHang.diachi = Request.Form["diachi"] +", " + Request.Form["phuongxa"] + ", " + Request.Form["huyen"] + "," + Request.Form["thanhpho"];
             donHang.tongtien = tongtien;
             donHang.trangthai = false;
-            donHang.thanhtoan = "Thanh toán khi nhận hàng";
+            donHang.thanhtoan = thanhtoan == "banking" ? "Thanh toán VnPay" : "Thanh toán khi nhận hàng";
             donHang.ngaydat = DateTime.Now;
             donHang.ngaynhan = donHang.ngaydat.AddDays(3);     
             taikhoan.diachi = Request.Form["dienthoai"];
@@ -121,6 +114,17 @@ namespace DoAn.Controllers
             }
             Session["giohang"] = 0;
 
+            if (thanhtoan == "banking")
+            {
+                string url = UrlPayment(1, donHang.madonhang);
+                return Redirect(url);
+            }
+            else if (thanhtoan == "momo")
+            {
+                string url = UrlPayment(2, donHang.madonhang);
+                return Redirect(url);
+            }
+
             //send mail
             string contentCustomer = System.IO.File.ReadAllText(Server.MapPath("~/Content/Template/send2.html"));
             contentCustomer = contentCustomer.Replace("{{madon}}", donHang.madonhang.ToString());
@@ -132,10 +136,8 @@ namespace DoAn.Controllers
             contentCustomer = contentCustomer.Replace("{{dienthoai}}", taikhoan.dienthoai);
             contentCustomer = contentCustomer.Replace("{{email}}", taikhoan.email);
             DoAn.Common.MailHeper.sendEmail("An Phát Computer", "Đơn Hàng #" + donHang.madonhang, contentCustomer.ToString(), taikhoan.email);
-            //string url = UrlPayment(1, donHang.madonhang);
 
             return RedirectToAction("Index", "DonHangs");
-            //return Json(new { success = true });
         }
 
         public ActionResult DatHang1()
@@ -161,54 +163,174 @@ namespace DoAn.Controllers
             var urlPayment = "";
             DonHang donHang = db.DonHangs.FirstOrDefault(d => d.madonhang == orderID);
 
-            //Get Config Info
-            string vnp_Returnurl = ConfigurationManager.AppSettings["vnp_Returnurl"]; //URL nhan ket qua tra ve 
-            string vnp_Url = ConfigurationManager.AppSettings["vnp_Url"]; //URL thanh toan cua VNPAY 
-            string vnp_TmnCode = ConfigurationManager.AppSettings["vnp_TmnCode"]; //Ma định danh merchant kết nối (Terminal Id)
-            string vnp_HashSecret = ConfigurationManager.AppSettings["vnp_HashSecret"]; //Secret Key
-
-            //Build URL for VNPAY
-            VnPayLibrary vnpay = new VnPayLibrary();
-
-            vnpay.AddRequestData("vnp_Version", VnPayLibrary.VERSION);
-            vnpay.AddRequestData("vnp_Command", "pay");
-            vnpay.AddRequestData("vnp_TmnCode", vnp_TmnCode);
-            vnpay.AddRequestData("vnp_Amount", (donHang.tongtien * 100).ToString()); //Số tiền thanh toán. Số tiền không mang các ký tự phân tách thập phân, phần nghìn, ký tự tiền tệ. Để gửi số tiền thanh toán là 100,000 VND (một trăm nghìn VNĐ) thì merchant cần nhân thêm 100 lần (khử phần thập phân), sau đó gửi sang VNPAY là: 10000000
-            
             if (typePayment == 1)
             {
+                //VNPay
+                //Get Config Info
+                string vnp_Returnurl = ConfigurationManager.AppSettings["vnp_Returnurl"]; //URL nhan ket qua tra ve 
+                string vnp_Url = ConfigurationManager.AppSettings["vnp_Url"]; //URL thanh toan cua VNPAY 
+                string vnp_TmnCode = ConfigurationManager.AppSettings["vnp_TmnCode"]; //Ma định danh merchant kết nối (Terminal Id)
+                string vnp_HashSecret = ConfigurationManager.AppSettings["vnp_HashSecret"]; //Secret Key
+
+                //Build URL for VNPAY
+                VnPayLibrary vnpay = new VnPayLibrary();
+
+                vnpay.AddRequestData("vnp_Version", VnPayLibrary.VERSION);
+                vnpay.AddRequestData("vnp_Command", "pay");
+                vnpay.AddRequestData("vnp_TmnCode", vnp_TmnCode);
+                vnpay.AddRequestData("vnp_Amount", (donHang.tongtien * 100).ToString()); //Số tiền thanh toán. Số tiền không mang các ký tự phân tách thập phân, phần nghìn, ký tự tiền tệ. Để gửi số tiền thanh toán là 100,000 VND (một trăm nghìn VNĐ) thì merchant cần nhân thêm 100 lần (khử phần thập phân), sau đó gửi sang VNPAY là: 10000000
+                
                 vnpay.AddRequestData("vnp_BankCode", "VNPAYQR");
+                vnpay.AddRequestData("vnp_CreateDate", donHang.ngaydat.ToString("yyyyMMddHHmmss"));
+                vnpay.AddRequestData("vnp_CurrCode", "VND");
+                vnpay.AddRequestData("vnp_IpAddr", Utils.GetIpAddress());
+                vnpay.AddRequestData("vnp_Locale", "vn");
+
+                vnpay.AddRequestData("vnp_OrderInfo", "Thanh toan don hang: #DH" + donHang.madonhang);
+                vnpay.AddRequestData("vnp_OrderType", "other"); //default value: other
+
+                vnpay.AddRequestData("vnp_ReturnUrl", vnp_Returnurl);
+                vnpay.AddRequestData("vnp_TxnRef", donHang.madonhang.ToString()); // Mã tham chiếu của giao dịch tại hệ thống của merchant. Mã này là duy nhất dùng để phân biệt các đơn hàng gửi sang VNPAY. Không được trùng lặp trong ngày
+
+                urlPayment = vnpay.CreateRequestUrl(vnp_Url, vnp_HashSecret);
             }
             else if (typePayment == 2)
             {
-                vnpay.AddRequestData("vnp_BankCode", "VNBANK");
+                //Momo
+                var momo = new MomoLibrary();
+                var khachHang = db.KhachHangs.Find(donHang.makhachhang);
+                urlPayment = momo.CreatePaymentRequest(
+                    donHang.madonhang.ToString(),
+                    "Thanh toan don hang: #DH" + donHang.madonhang,
+                    (long)(donHang.tongtien * 100),
+                    khachHang.hoten,
+                    khachHang.email,
+                    khachHang.dienthoai
+                );
             }
-            else if (typePayment == 3)
-            {
-                vnpay.AddRequestData("vnp_BankCode", "INTCARD");
-            }
 
-            vnpay.AddRequestData("vnp_CreateDate", donHang.ngaydat.ToString("yyyyMMddHHmmss"));
-            vnpay.AddRequestData("vnp_CurrCode", "VND");
-            vnpay.AddRequestData("vnp_IpAddr", Utils.GetIpAddress());
-            vnpay.AddRequestData("vnp_Locale", "vn");
-
-            vnpay.AddRequestData("vnp_OrderInfo", "Thanh toan don hang: #DH" + donHang.madonhang);
-            vnpay.AddRequestData("vnp_OrderType", "other"); //default value: other
-
-            vnpay.AddRequestData("vnp_ReturnUrl", vnp_Returnurl);
-            vnpay.AddRequestData("vnp_TxnRef", donHang.madonhang.ToString()); // Mã tham chiếu của giao dịch tại hệ thống của merchant. Mã này là duy nhất dùng để phân biệt các đơn hàng gửi sang VNPAY. Không được trùng lặp trong ngày
-
-            //Add Params of 2.1.0 Version
-            //Billing
-
-            urlPayment = vnpay.CreateRequestUrl(vnp_Url, vnp_HashSecret);
             return urlPayment;
         }
 
         public ActionResult VnpayReturn()
         {
+            if (Request.QueryString.Count > 0)
+            {
+                string vnp_HashSecret = ConfigurationManager.AppSettings["vnp_HashSecret"]; //Chuỗi bí mật
+                var vnpayData = Request.QueryString;
+                VnPayLibrary vnpay = new VnPayLibrary();
+
+                foreach (string s in vnpayData)
+                {
+                    //get all querystring data
+                    if (!string.IsNullOrEmpty(s) && s.StartsWith("vnp_"))
+                    {
+                        vnpay.AddResponseData(s, vnpayData[s]);
+                    }
+                }
+                //Lay danh sach tham so tra ve tu VNPAY
+                //vnp_TxnRef: Ma don hang merchant gui VNPAY tai command=pay    
+                //vnp_TransactionNo: Ma GD tai he thong VNPAY
+                //vnp_ResponseCode:Response code from VNPAY: 00: Thanh cong, Khac 00: Xem tai lieu
+                //vnp_SecureHash: HmacSHA512 cua du lieu tra ve
+
+                long orderId = Convert.ToInt64(vnpay.GetResponseData("vnp_TxnRef"));
+                long vnpayTranId = Convert.ToInt64(vnpay.GetResponseData("vnp_TransactionNo"));
+                string vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
+                string vnp_SecureHash = Request.QueryString["vnp_SecureHash"];
+                bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, vnp_HashSecret);
+
+                if (checkSignature)
+                {
+                    if (vnp_ResponseCode == "00")
+                    {
+                        //Thanh toan thanh cong
+                        var donHang = db.DonHangs.Find(orderId);
+                        if (donHang != null)
+                        {
+                            donHang.trangthai = true;
+                            db.SaveChanges();
+                            ViewBag.ThanhToanThanhCong = true;
+                            ViewBag.MaDonHang = donHang.madonhang;
+                            ViewBag.SoTien = donHang.tongtien;
+                        }
+                    }
+                    else
+                    {
+                        //Thanh toan khong thanh cong. Ma loi: vnp_ResponseCode
+                        ViewBag.ThanhToanThanhCong = false;
+                    }
+                }
+                else
+                {
+                    ViewBag.ThanhToanThanhCong = false;
+                }
+            }
             return View();
+        }
+
+        public ActionResult MomoReturn()
+        {
+            if (Request.QueryString.Count > 0)
+            {
+                string partnerCode = Request.QueryString["partnerCode"];
+                string orderId = Request.QueryString["orderId"];
+                string resultCode = Request.QueryString["resultCode"];
+                string message = Request.QueryString["message"];
+
+                if (resultCode == "0")
+                {
+                    //Thanh toan thanh cong
+                    var donHang = db.DonHangs.Find(int.Parse(orderId));
+                    if (donHang != null)
+                    {
+                        donHang.trangthai = true;
+                        db.SaveChanges();
+                        ViewBag.ThanhToanThanhCong = true;
+                        ViewBag.MaDonHang = donHang.madonhang;
+                        ViewBag.SoTien = donHang.tongtien;
+                    }
+                }
+                else
+                {
+                    ViewBag.ThanhToanThanhCong = false;
+                }
+            }
+            return View("VnpayReturn");
+        }
+
+        [HttpPost]
+        public ActionResult MomoNotify()
+        {
+            try
+            {
+                string rawBody = new StreamReader(Request.InputStream).ReadToEnd();
+                string signature = Request.Headers["X-Signature"];
+
+                var momo = new MomoLibrary();
+                if (momo.ValidateCallback(rawBody, signature))
+                {
+                    JObject data = JObject.Parse(rawBody);
+                    string orderId = data["orderId"].ToString();
+                    string resultCode = data["resultCode"].ToString();
+
+                    if (resultCode == "0")
+                    {
+                        var donHang = db.DonHangs.Find(int.Parse(orderId));
+                        if (donHang != null)
+                        {
+                            donHang.trangthai = true;
+                            db.SaveChanges();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Log error
+            }
+
+            return new HttpStatusCodeResult(200);
         }
 
     }

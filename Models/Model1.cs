@@ -19,6 +19,7 @@ namespace DoAn.Models
         public virtual DbSet<SanPham> SanPhams { get; set; }
         public virtual DbSet<DonHangChiTiet> DonHangChiTiets { get; set; }
         public virtual DbSet<TinTuc> TinTucs { get; set; }
+        public virtual DbSet<YeuThich> YeuThichs { get; set; }
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             modelBuilder.Entity<DonHang>()
