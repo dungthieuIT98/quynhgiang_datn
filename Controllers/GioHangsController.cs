@@ -1,16 +1,14 @@
-﻿using System;
+﻿using DoAn.Models;
+using DoAn.PayMethod;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.Entity;
-using System.Linq;
-using System.Net;
-using System.Web;
-using System.Web.Mvc;
-using DoAn.Models;
-using DoAn.PayMethod;
 using System.IO;
-using Newtonsoft.Json.Linq;
+using System.Linq;
+using System.Web.Mvc;
 
 namespace DoAn.Controllers
 {
@@ -197,7 +195,7 @@ namespace DoAn.Controllers
             else if (typePayment == 2)
             {
                 //Momo
-                var momo = new MomoLibrary();
+                MomoLibrary momo = new MomoLibrary();
                 var khachHang = db.KhachHangs.Find(donHang.makhachhang);
                 urlPayment = momo.CreatePaymentRequest(
                     donHang.madonhang.ToString(),

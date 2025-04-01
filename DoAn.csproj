@@ -167,9 +167,11 @@
     <Compile Include="Models\Model1.cs" />
     <Compile Include="Models\SanPham.cs" />
     <Compile Include="Models\TinTuc.cs" />
-    <Compile Include="PayMethod\MônLibrary.cs" />
+    <Compile Include="Models\YeuThich.cs" />
+    <Compile Include="PayMethod\MomoLibrary.cs" />
     <Compile Include="PayMethod\VnPayLibrary.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Controllers\YeuThichsController.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\assets\css\bootstrap.min.css" />
